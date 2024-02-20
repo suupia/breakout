@@ -233,6 +233,18 @@ fn setup(
         Velocity(INITIAL_BALL_DIRECTION.normalize() * BALL_SPEED),
     ));
 
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(Circle::default()).into(),
+            material: materials.add(BALL_COLOR),
+            transform: Transform::from_translation(BALL_STARTING_POSITION)
+                .with_scale(Vec2::splat(BALL_DIAMETER).extend(1.)),
+            ..default()
+        },
+        Ball,
+        Velocity(INITIAL_BALL_DIRECTION.normalize() * BALL_SPEED),
+    ));
+
     // Scoreboard
     commands.spawn((
         ScoreboardUi,
@@ -336,10 +348,6 @@ fn move_paddle(
         direction += 1.0;
     }
 
-    if direction != 0.0 {
-        info!("direction: {}", direction);
-        debug!("direction");
-    }
 
     // Calculate the new horizontal paddle position based on player input
     let new_paddle_position =
@@ -372,7 +380,7 @@ fn check_for_collisions(
     collider_query: Query<(Entity, &Transform, Option<&Brick>), With<Collider>>,
     mut collision_events: EventWriter<CollisionEvent>,
 ) {
-    let (mut ball_velocity, ball_transform) = ball_query.single_mut();
+    for (mut ball_velocity, ball_transform) in &mut ball_query {
 
     // check collision with walls
     for (collider_entity, transform, maybe_brick) in &collider_query {
@@ -418,6 +426,10 @@ fn check_for_collisions(
             }
         }
     }
+    }
+        
+    // let (mut ball_velocity, ball_transform) = ball_query.single_mut();
+
 }
 
 fn play_collision_sound(
