@@ -235,9 +235,9 @@ fn setup(
 
     commands.spawn((
         MaterialMesh2dBundle {
-            mesh: meshes.add(Circle::default()).into(),
+            mesh: meshes.add(Rectangle::default()).into(),
             material: materials.add(BALL_COLOR),
-            transform: Transform::from_translation(BALL_STARTING_POSITION)
+            transform: Transform::from_translation(BALL_STARTING_POSITION+BALL_STARTING_POSITION)
                 .with_scale(Vec2::splat(BALL_DIAMETER).extend(1.)),
             ..default()
         },
