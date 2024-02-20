@@ -51,12 +51,12 @@ const SCORE_COLOR: Color = Color::rgb(1.0, 0.5, 0.5);
 
 fn main() {
     App::new()
-    .add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
-        // Uncomment this to override the default log settings:
-        level: bevy::log::Level::INFO,
-        filter: "wgpu=warn,bevy_ecs=info".to_string(),
-        ..default()
-    }))
+        .add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
+            // Uncomment this to override the default log settings:
+            level: bevy::log::Level::INFO,
+            filter: "wgpu=warn,bevy_ecs=info".to_string(),
+            ..default()
+        }))
         .add_plugins(
             stepping::SteppingPlugin::default()
                 .add_schedule(Update)
@@ -237,7 +237,7 @@ fn setup(
         MaterialMesh2dBundle {
             mesh: meshes.add(Rectangle::default()).into(),
             material: materials.add(BALL_COLOR),
-            transform: Transform::from_translation(BALL_STARTING_POSITION+BALL_STARTING_POSITION)
+            transform: Transform::from_translation(BALL_STARTING_POSITION + BALL_STARTING_POSITION)
                 .with_scale(Vec2::splat(BALL_DIAMETER).extend(1.)),
             ..default()
         },
@@ -348,7 +348,6 @@ fn move_paddle(
         direction += 1.0;
     }
 
-
     // Calculate the new horizontal paddle position based on player input
     let new_paddle_position =
         paddle_transform.translation.x + direction * PADDLE_SPEED * time.delta_seconds();
@@ -380,55 +379,53 @@ fn check_for_collisions(
     collider_query: Query<(Entity, &Transform, Option<&Brick>), With<Collider>>,
     mut collision_events: EventWriter<CollisionEvent>,
 ) {
+    // let (mut ball_velocity, ball_transform) = ball_query.single_mut();
     for (mut ball_velocity, ball_transform) in &mut ball_query {
+        // check collision with walls
+        for (collider_entity, transform, maybe_brick) in &collider_query {
+            let collision = collide_with_side(
+                BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
+                Aabb2d::new(
+                    transform.translation.truncate(),
+                    transform.scale.truncate() / 2.,
+                ),
+            );
 
-    // check collision with walls
-    for (collider_entity, transform, maybe_brick) in &collider_query {
-        let collision = collide_with_side(
-            BoundingCircle::new(ball_transform.translation.truncate(), BALL_DIAMETER / 2.),
-            Aabb2d::new(
-                transform.translation.truncate(),
-                transform.scale.truncate() / 2.,
-            ),
-        );
+            if let Some(collision) = collision {
+                // Sends a collision event so that other systems can react to the collision
+                collision_events.send_default();
 
-        if let Some(collision) = collision {
-            // Sends a collision event so that other systems can react to the collision
-            collision_events.send_default();
+                // Bricks should be despawned and increment the scoreboard on collision
+                if maybe_brick.is_some() {
+                    scoreboard.score += 1;
+                    commands.entity(collider_entity).despawn();
+                }
 
-            // Bricks should be despawned and increment the scoreboard on collision
-            if maybe_brick.is_some() {
-                scoreboard.score += 1;
-                commands.entity(collider_entity).despawn();
-            }
+                // reflect the ball when it collides
+                let mut reflect_x = false;
+                let mut reflect_y = false;
 
-            // reflect the ball when it collides
-            let mut reflect_x = false;
-            let mut reflect_y = false;
+                // only reflect if the ball's velocity is going in the opposite direction of the
+                // collision
+                match collision {
+                    Collision::Left => reflect_x = ball_velocity.x > 0.0,
+                    Collision::Right => reflect_x = ball_velocity.x < 0.0,
+                    Collision::Top => reflect_y = ball_velocity.y < 0.0,
+                    Collision::Bottom => reflect_y = ball_velocity.y > 0.0,
+                }
 
-            // only reflect if the ball's velocity is going in the opposite direction of the
-            // collision
-            match collision {
-                Collision::Left => reflect_x = ball_velocity.x > 0.0,
-                Collision::Right => reflect_x = ball_velocity.x < 0.0,
-                Collision::Top => reflect_y = ball_velocity.y < 0.0,
-                Collision::Bottom => reflect_y = ball_velocity.y > 0.0,
-            }
+                // reflect velocity on the x-axis if we hit something on the x-axis
+                if reflect_x {
+                    ball_velocity.x = -ball_velocity.x;
+                }
 
-            // reflect velocity on the x-axis if we hit something on the x-axis
-            if reflect_x {
-                ball_velocity.x = -ball_velocity.x;
-            }
-
-            // reflect velocity on the y-axis if we hit something on the y-axis
-            if reflect_y {
-                ball_velocity.y = -ball_velocity.y;
+                // reflect velocity on the y-axis if we hit something on the y-axis
+                if reflect_y {
+                    ball_velocity.y = -ball_velocity.y;
+                }
             }
         }
     }
-    }
-        
-    // let (mut ball_velocity, ball_transform) = ball_query.single_mut();
 
 }
 
